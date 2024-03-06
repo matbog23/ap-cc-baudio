@@ -7,7 +7,7 @@ import numpy as np
 cap = cv2.VideoCapture(0)  # Use 0 for default camera
 
 # Instance text detector
-reader = easyocr.Reader(['en, nl'], gpu=True)
+reader = easyocr.Reader(['en'], gpu=True)
 
 # Define threshold
 threshold = 0.25
