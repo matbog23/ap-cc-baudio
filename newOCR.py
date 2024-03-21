@@ -1,3 +1,5 @@
+import asyncio
+import websockets
 import cv2
 import os
 import time
@@ -45,8 +47,8 @@ def generate_shakespearean_poem(prompt):
         print("Response Content:", response.content)
         return "Error generating poem"
 
-if __name__ == "__main__":
-    # Initialize the webcam
+async def send_result(websocket, path):
+    # Capture frame-by-frame
     cap = cv2.VideoCapture(0)
 
     # Check if the webcam is opened correctly
@@ -63,9 +65,6 @@ if __name__ == "__main__":
                 print("Error: Could not read frame")
                 break
 
-            # Display the captured frame
-            cv2.imshow('Webcam', frame)
-
             # Save the image with a unique filename (timestamp)
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             filename = f"captured_image_{timestamp}.jpg"
@@ -75,24 +74,31 @@ if __name__ == "__main__":
             result = reader.readtext(filename)
 
             # Print the detected text
+            detected_text = ""
             if result:
                 print("Detected Text:")
                 for detection in result:
                     print(detection[1])
+                    detected_text += detection[1] + " "
 
-                    # Generate and print a Shakespearean poem based on detected text
-                    prompt = detection[1]
-                    poem = generate_shakespearean_poem(prompt)
-                    print(poem)
+                print("Volledige OCR tekst: ", detected_text)
+
+                # Generate and print a Shakespearean poem based on detected text
+                poem = generate_shakespearean_poem(detected_text)
+                print(poem)
+
+                # Send the result over the WebSocket connection
+                await websocket.send(poem)
 
             # Wait for 10 seconds
             time.sleep(10)
-
-            # Check for user input to break the loop
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
     finally:
         # Release the capture
         cap.release()
         cv2.destroyAllWindows()
+
+start_server = websockets.serve(send_result, "localhost", 8765)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
